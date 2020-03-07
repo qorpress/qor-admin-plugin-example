@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"plugin"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
@@ -30,6 +31,36 @@ type Product struct {
 }
 
 func main() {
+	// Plugins
+	   numbers := []int{5, 2, 7, 6, 1, 3, 4, 8}
+ 
+    // The plugins (the *.so files) must be in a 'plugins' sub-directory
+    all_plugins, err := filepath.Glob("./plugins/*.so")
+    if err != nil {
+        panic(err)
+    }
+ 
+    for _, filename := range (all_plugins) {
+        p, err := plugin.Open(filename)
+        if err != nil {
+            panic(err)
+        }
+         
+        symbol, err := p.Lookup("Sort")
+        if err != nil {
+            panic(err)
+        }
+ 
+        sortFunc, ok := symbol.(func([]int) *[]int)
+        if !ok {
+            panic("Plugin has no 'Sort([]int) []int' function")
+        }
+ 
+        sorted := sortFunc(numbers)
+        fmt.Println(filename, sorted)
+    }
+
+
 	// Set up the database
 	DB, _ := gorm.Open("sqlite3", "demo.db")
 	DB.AutoMigrate(&User{}, &Product{})
@@ -57,7 +88,7 @@ func main() {
 
 	fmt.Println("Listening on: 8080")
 
-	err := http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
 		log.Fatalln(err)
 	}
