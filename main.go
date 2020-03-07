@@ -30,39 +30,11 @@ type Product struct {
 	Description string
 }
 
+var DB *gorm.DB
+
 func main() {
-	// Plugins
-	   numbers := []int{5, 2, 7, 6, 1, 3, 4, 8}
- 
-    // The plugins (the *.so files) must be in a 'plugins' sub-directory
-    all_plugins, err := filepath.Glob("./plugins/*.so")
-    if err != nil {
-        panic(err)
-    }
- 
-    for _, filename := range (all_plugins) {
-        p, err := plugin.Open(filename)
-        if err != nil {
-            panic(err)
-        }
-         
-        symbol, err := p.Lookup("Sort")
-        if err != nil {
-            panic(err)
-        }
- 
-        sortFunc, ok := symbol.(func([]int) *[]int)
-        if !ok {
-            panic("Plugin has no 'Sort([]int) []int' function")
-        }
- 
-        sorted := sortFunc(numbers)
-        fmt.Println(filename, sorted)
-    }
-
-
 	// Set up the database
-	DB, _ := gorm.Open("sqlite3", "demo.db")
+	DB, _ = gorm.Open("sqlite3", "demo.db")
 	DB.AutoMigrate(&User{}, &Product{})
 
 	// Initialize AssetFS
@@ -80,6 +52,37 @@ func main() {
 	Admin.AddResource(&User{})
 	Admin.AddResource(&Product{})
 
+	// Plugins
+	numbers := []int{5, 2, 7, 6, 1, 3, 4, 8}
+ 
+    // The plugins (the *.so files) must be in a 'plugins' sub-directory
+    all_plugins, err := filepath.Glob("./plugins/*.so")
+    if err != nil {
+        panic(err)
+    }
+ 
+    for _, filename := range (all_plugins) {
+        p, err := plugin.Open(filename)
+        if err != nil {
+            panic(err)
+        }
+         
+        // DB.AutoMigrate(&User{})
+        // Admin.AddResource(&Product{})
+        symbol, err := p.Lookup("Sort")
+        if err != nil {
+            panic(err)
+        }
+ 
+        sortFunc, ok := symbol.(func([]int) *[]int)
+        if !ok {
+            panic("Plugin has no 'Sort([]int) []int' function")
+        }
+ 
+        sorted := sortFunc(numbers)
+        fmt.Println(filename, sorted)
+    }
+
 	// Initialize an HTTP request multiplexer
 	mux := http.NewServeMux()
 
@@ -91,5 +94,15 @@ func main() {
 	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
 		log.Fatalln(err)
+	}
+}
+
+func TruncateTables(tables ...interface{}) {
+	for _, table := range tables {
+		if err := DB.DropTableIfExists(table).Error; err != nil {
+			panic(err)
+		}
+
+		DraftDB.AutoMigrate(table)
 	}
 }
