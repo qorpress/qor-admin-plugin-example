@@ -27,15 +27,9 @@ PLUGIN?=oniontree
 PLUGIN_SO=$(APPNAME)-$(PLUGIN).so
 
 # Extract version infos
-#PKG_VERSION:=github.com/qorpress/$(APPNAME)/v1/pkg/version
 VERSION:=`git describe --tags --always`
 GIT_COMMIT:=`git rev-list -1 HEAD --abbrev-commit`
-#BUILT:=`date`
-#define LDFLAGS
-#-X '$(PKG_VERSION).Version=$(VERSION)' \
-#-X '$(PKG_VERSION).GitCommit=$(GIT_COMMIT)' \
-#-X '$(PKG_VERSION).Built=$(BUILT)'
-#endef
+BUILT:=`date`
 
 dep:
 	go mod vendor
@@ -61,14 +55,12 @@ build_bindatafs: dep
 
 ## Bulid plugin (defined by PLUGIN variable)
 plugin:
-	-mkdir -p release
+	-mkdir -p plugins
 	echo ">>> Building: $(PLUGIN_SO) $(VERSION) for $(GOOS)-$(GOARCH) ..."
 	cd plugins/$(PLUGIN) && GOOS=$(GOOS) GOARCH=$(GOARCH) go build -buildmode=plugin -o ../../plugins/$(PLUGIN_SO)
 .PHONY: plugin
 
 ## Build all plugins
 plugins:
-	GOARCH=amd64 PLUGIN=bubble_sort make plugin
-	GOARCH=amd64 PLUGIN=quick_sort make plugin
 	GOARCH=amd64 PLUGIN=oniontree make plugin
 .PHONY: plugins   

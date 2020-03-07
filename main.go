@@ -53,7 +53,6 @@ func main() {
 	Admin.AddResource(&Product{})
 
 	// Plugins
-	numbers := []int{5, 2, 7, 6, 1, 3, 4, 8}
  
     // The plugins (the *.so files) must be in a 'plugins' sub-directory
     all_plugins, err := filepath.Glob("./plugins/*.so")
@@ -66,21 +65,23 @@ func main() {
         if err != nil {
             panic(err)
         }
-         
-        // DB.AutoMigrate(&User{})
-        // Admin.AddResource(&Product{})
-        symbol, err := p.Lookup("Sort")
+
+        symbol, err := p.Lookup("Migrate")
         if err != nil {
             panic(err)
         }
  
-        sortFunc, ok := symbol.(func([]int) *[]int)
+        migrateFunc, ok := symbol.(func() []interface{})
         if !ok {
-            panic("Plugin has no 'Sort([]int) []int' function")
+            panic("Plugin has no 'Migrate() []interface{}' function")
         }
- 
-        sorted := sortFunc(numbers)
-        fmt.Println(filename, sorted)
+
+        tables := migrateFunc()
+        for _, table := range tables {
+        	DB.AutoMigrate(table)
+        	Admin.AddResource(table)
+        }
+
     }
 
 	// Initialize an HTTP request multiplexer
@@ -102,7 +103,6 @@ func TruncateTables(tables ...interface{}) {
 		if err := DB.DropTableIfExists(table).Error; err != nil {
 			panic(err)
 		}
-
-		DraftDB.AutoMigrate(table)
+		DB.AutoMigrate(table)
 	}
 }
